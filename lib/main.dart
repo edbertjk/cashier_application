@@ -1,7 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
-import 'package:marquee/marquee.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -21,18 +23,8 @@ class _HomePageState extends State<HomePage> {
   List<List> ListData = [];
   int TotalPrice = 0;
   int NoTransaksi = 1;
-  List<List> ListBarang = [
-    ["Barang Ke 1", 100],
-    ["Barang Ke 2", 200],
-    ["Barang Ke 3", 300],
-    ["Barang Ke 4", 400],
-    ["Barang Ke 5", 500],
-    ["Barang Ke 6", 600],
-    ["Barang Ke 7", 700],
-    ["Barang Ke 8", 800],
-    ["Barang Ke 9", 900],
-    ["Barang Ke 10", 1000]
-  ];
+  List<List> ListBarang = [];
+  bool isConnectAPI = false;
   List<BluetoothDevice> devices = [];
   BluetoothDevice? selectedDevice;
   BlueThermalPrinter printer = BlueThermalPrinter.instance;
@@ -44,6 +36,13 @@ class _HomePageState extends State<HomePage> {
 
     // Jika panjang string lebih dari 32, potong dan kembalikan substring 32 karakter pertama
     return text.substring(0, 32);
+  }
+
+  String capitalize(String input) {
+    if (input.isEmpty) {
+      return input;
+    }
+    return input[0].toUpperCase() + input.substring(1);
   }
 
   void printing(String All, int Total) async {
@@ -97,7 +96,6 @@ class _HomePageState extends State<HomePage> {
     );
     printer.printNewLine();
     printer.printNewLine();
-    printer.printNewLine();
   }
 
   @override
@@ -113,6 +111,22 @@ class _HomePageState extends State<HomePage> {
   void getDevice() async {
     devices = await printer.getBondedDevices();
     setState(() {});
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    connectHttp();
+  }
+
+  connectHttp() async {
+    Uri linkUrl = Uri.parse("http://growplus.my.id/");
+    var request = await http.get(linkUrl);
+    var dataJson = (json.decode(request.body));
+    setState(() {
+      ListBarang.add(dataJson);
+      isConnectAPI = true;
+    });
   }
 
   @override
@@ -160,219 +174,265 @@ class _HomePageState extends State<HomePage> {
                   child: Text("Disconnect")),
             ]),
       ),
-      body: Row(
-        children: [
-          Container(
-            width: screenWidth * 0.3,
-            height: double.infinity,
-            decoration: BoxDecoration(color: Colors.red),
-            child: Column(
-              children: [
-                Container(
-                  width: screenWidth * 0.3,
-                  height: 100,
-                  color: Colors.white,
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: Text("Rp.${TotalPrice.toString()}"),
-                  ),
-                ),
-                Container(
-                  margin: EdgeInsets.only(top: 20),
-                  height: 350,
-                  width: screenWidth * 0.3,
-                  child: ListView.builder(
-                    itemCount: ListData.length,
-                    itemBuilder: (context, index) {
-                      return Row(
-                        children: [
-                          Container(
-                            margin: EdgeInsets.only(left: 14),
-                            child: Text(
-                                "${ListData[index][0]} Rp.${ListData[index][1]}  "),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                ListData[index][2] -= 1;
-                                int dataChange = ListBarang[index][1];
-                                TotalPrice -= dataChange;
-                              });
-                            },
-                            icon: Icon(Icons.remove),
-                            iconSize: 20,
-                          ),
-                          Text("${ListData[index][2]}"),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                ListData[index][2] += 1;
-                                int dataChange = ListBarang[index][1];
-                                TotalPrice += dataChange;
-                              });
-                            },
-                            icon: Icon(Icons.add),
-                            iconSize: 20,
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                )
-              ],
-            ),
-          ),
-          Container(
-            width: screenWidth * 0.70,
-            padding: EdgeInsets.symmetric(horizontal: screenHeight * 0.02),
-            height: double.infinity,
-            decoration: BoxDecoration(color: Colors.blue),
-            child: Column(children: [
-              //Pay & Search Items
+      body: SingleChildScrollView(
+        child: Container(
+          height: screenHeight,
+          width: screenWidth,
+          child: Row(
+            children: [
               Container(
-                width: screenWidth * 0.66,
-                height: 60,
-                padding: EdgeInsets.symmetric(horizontal: 1),
-                color: Colors.amber,
-                child: Row(
+                width: screenWidth * 0.3,
+                height: double.infinity,
+                decoration: BoxDecoration(color: Colors.blue),
+                child: Column(
                   children: [
                     Container(
-                      width: 130,
-                      height: 50,
-                      margin: EdgeInsets.symmetric(horizontal: 11),
-                      child: ElevatedButton(
-                          onPressed: () {
-                            String AllData = "";
-                            int Total = 0;
-                            for (int i = 0; i < ListData.length; i++) {
-                              AllData +=
-                                  "${ListData[i][0]} Rp. ${ListData[i][1]} (${ListData[i][2]})\n";
-                              int insert = ListData[i][1];
-                              Total += insert;
-                            }
-
-                            printing(AllData, Total);
-                            NoTransaksi += 1;
-                          },
-                          child: Text("Bayar Tunai")),
-                    ),
-                    Container(
-                      width: 130,
-                      height: 50,
-                      margin: EdgeInsets.only(right: 10),
-                      child: ElevatedButton(
-                          onPressed: () {}, child: Text("Pembayaran Lain")),
-                    ),
-                    Container(
-                      width: 310,
-                      height: 50,
-                      child: TextField(
-                        style: TextStyle(fontSize: 13),
-                        decoration: InputDecoration(
-                          hintText: 'Search Items',
+                      width: screenWidth * 0.3,
+                      height: 100,
+                      color: Colors.black,
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          "Rp.${TotalPrice.toString()}",
+                          style: TextStyle(color: Colors.white),
                         ),
                       ),
                     ),
-                    IconButton(
-                        onPressed: () {}, icon: Icon(size: 30, Icons.search))
+                    Container(
+                      margin: EdgeInsets.only(top: 20),
+                      height: 350,
+                      width: screenWidth * 0.3,
+                      child: ListView.builder(
+                        itemCount: ListData.length,
+                        itemBuilder: (context, index) {
+                          return Row(
+                            children: [
+                              Container(
+                                margin: EdgeInsets.only(left: 7),
+                                child: Text(
+                                  "${capitalize(ListData[index][0])} ${ListData[index][1]}",
+                                  style: TextStyle(
+                                      fontSize: 10, color: Colors.white),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    if (ListData[index][2] > 1) {
+                                      ListData[index][2] -= 1;
+                                      int dataChange = ListBarang[0][index]
+                                          ["harga_jual_barang"];
+                                      TotalPrice -= dataChange;
+                                    } else {
+                                      int dataChange = ListBarang[0][index]
+                                          ["harga_jual_barang"];
+                                      TotalPrice -= dataChange;
+                                      ListData.removeAt(index);
+                                    }
+                                  });
+                                },
+                                icon: Icon(
+                                  Icons.remove,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                              ),
+                              Text(
+                                "${ListData[index][2]}",
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  setState(() {
+                                    ListData[index][2] += 1;
+                                    int dataChange = ListBarang[0][index]
+                                        ["harga_jual_barang"];
+                                    TotalPrice += dataChange;
+                                  });
+                                },
+                                icon: Icon(
+                                  Icons.add,
+                                  color: Colors.green,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    )
                   ],
                 ),
               ),
-
-//List View Categories
               Container(
-                margin: EdgeInsets.only(top: 10),
-                width: screenWidth * 0.66,
-                height: 50,
-                padding: EdgeInsets.symmetric(horizontal: 1),
-                color: Colors.purple,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 7,
-                  itemBuilder: ((context, index) {
-                    return Container(
-                      width: 240,
-                      height: 50,
-                      margin: EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(5)),
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: ElevatedButton(
-                          style: ButtonStyle(
-                              minimumSize: MaterialStateProperty.all<Size?>(
-                                  Size(240, 50)),
-                              backgroundColor: MaterialStateProperty.all<Color>(
-                                  Colors.transparent)),
-                          onPressed: () {},
-                          child: Text(
-                            "Ini Adalah Index Ke $index",
-                            style: TextStyle(fontSize: 10),
+                width: screenWidth * 0.70,
+                padding: EdgeInsets.symmetric(horizontal: screenHeight * 0.02),
+                height: double.infinity,
+                decoration: BoxDecoration(color: Colors.white),
+                child: Column(children: [
+                  //Pay & Search Items
+                  Container(
+                    width: screenWidth * 0.66,
+                    height: 60,
+                    padding: EdgeInsets.symmetric(horizontal: 1),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 130,
+                          height: 50,
+                          margin: EdgeInsets.symmetric(horizontal: 11),
+                          child: ElevatedButton(
+                              onPressed: () {
+                                String AllData = "";
+                                int Total = 0;
+                                for (int i = 0; i < ListData.length; i++) {
+                                  AllData +=
+                                      "${ListData[i][0]} Rp. ${ListData[i][1]} (${ListData[i][2]})\n";
+                                  int insert = ListData[i][1];
+                                  Total += insert;
+                                }
+
+                                printing(AllData, Total);
+                                NoTransaksi += 1;
+                              },
+                              child: Text("Bayar Tunai")),
+                        ),
+                        Container(
+                          width: 130,
+                          height: 50,
+                          margin: EdgeInsets.only(right: 10),
+                          child: ElevatedButton(
+                              onPressed: () {}, child: Text("Pembayaran Lain")),
+                        ),
+                        Container(
+                          width: 310,
+                          height: 50,
+                          child: TextField(
+                            style: TextStyle(fontSize: 13),
+                            decoration: InputDecoration(
+                              hintText: 'Search Items',
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  }),
-                ),
-              ),
-              //List View Product
-              Container(
-                width: screenWidth * 0.66,
-                height: 340,
-                padding: EdgeInsets.symmetric(horizontal: 1),
-                margin: EdgeInsets.only(top: 5),
-                child: ListView.builder(
-                    itemCount: ListBarang
-                        .length, // Ganti dengan jumlah total container yang Anda inginkan
-                    itemBuilder: (BuildContext context, int index) {
-                      // Hitung indeks baris dan kolo
+                        IconButton(
+                            onPressed: () {},
+                            icon: Icon(size: 30, Icons.search))
+                      ],
+                    ),
+                  ),
 
-                      return Container(
-                        width: screenWidth * 0.66,
-                        height: 55,
-                        margin: EdgeInsets.symmetric(vertical: 3),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                setState(() {
-                                  ListData.add([
-                                    ListBarang[index][0],
-                                    ListBarang[index][1],
-                                    1, // Jumlah atau nilai lainnya
-                                  ]);
-                                  try {
-                                    int dataChange = ListBarang[index][1];
-                                    TotalPrice += dataChange;
-                                  } catch (e) {
-                                    // Handle the exception, for example, print an error message.
-                                    print('Error parsing integer: $e');
-                                  }
-                                });
-                              },
-                              icon: Icon(Icons.add),
-                              iconSize: 25,
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 25),
+                  //List View Categories
+                  Container(
+                    margin: EdgeInsets.only(top: 10),
+                    width: screenWidth * 0.66,
+                    height: 50,
+                    padding: EdgeInsets.symmetric(horizontal: 1),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 7,
+                      itemBuilder: ((context, index) {
+                        return Container(
+                          width: 240,
+                          height: 50,
+                          margin: EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(5)),
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: ElevatedButton(
+                              style: ButtonStyle(
+                                  minimumSize: MaterialStateProperty.all<Size?>(
+                                      Size(240, 50)),
+                                  backgroundColor:
+                                      MaterialStateProperty.all<Color>(
+                                          Colors.transparent)),
+                              onPressed: () {},
                               child: Text(
-                                ListBarang[index][0],
-                                style: TextStyle(fontSize: 15),
+                                "Ini Adalah Index Ke $index",
+                                style: TextStyle(fontSize: 10),
                               ),
                             ),
-                            Text(
-                              "Rp.${ListBarang[index][1]}",
-                              style: TextStyle(fontSize: 15),
-                            )
-                          ],
-                        ),
-                      );
-                    }),
-              ),
-            ]),
-          )
-        ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  //List View Product
+                  isConnectAPI
+                      ? Container(
+                          width: screenWidth * 0.66,
+                          height: 340,
+                          padding: EdgeInsets.symmetric(horizontal: 1),
+                          margin: EdgeInsets.only(top: 5),
+                          child: ListView.builder(
+                              itemCount: ListBarang[0]
+                                  .length, // Ganti dengan jumlah total container yang Anda inginkan
+                              itemBuilder: (BuildContext context, int index) {
+                                // Hitung indeks baris dan kolo
+
+                                return Container(
+                                  width: screenWidth * 0.66,
+                                  height: 55,
+                                  margin: EdgeInsets.symmetric(vertical: 3),
+                                  child: Row(
+                                    children: [
+                                      ElevatedButton(
+                                        style: ButtonStyle(
+                                            backgroundColor:
+                                                MaterialStateProperty.all(
+                                                    Colors.white),
+                                            fixedSize:
+                                                MaterialStateProperty.all(
+                                                    Size(20.0, 20.0))),
+                                        onPressed: () {
+                                          setState(() {
+                                            ListData.add([
+                                              ListBarang[0][index]
+                                                  ["nama_barang"],
+                                              ListBarang[0][index]
+                                                  ["harga_jual_barang"],
+                                              1, // Jumlah atau nilai lainnya
+                                            ]);
+                                            try {
+                                              int dataChange = ListBarang[0]
+                                                  [index]["harga_jual_barang"];
+                                              TotalPrice += dataChange;
+                                            } catch (e) {
+                                              // Handle the exception, for example, print an error message.
+                                              print(
+                                                  'Error parsing integer: $e');
+                                            }
+                                          });
+                                        },
+                                        child: Icon(
+                                          Icons.add,
+                                          color: Colors.green,
+                                          size: 25,
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 25),
+                                        child: Text(
+                                          ListBarang[0][index]["nama_barang"],
+                                          style: TextStyle(fontSize: 15),
+                                        ),
+                                      ),
+                                      Text(
+                                        "Rp.${ListBarang[0][index]["harga_jual_barang"]}",
+                                        style: TextStyle(fontSize: 15),
+                                      )
+                                    ],
+                                  ),
+                                );
+                              }),
+                        )
+                      : Container(),
+                ]),
+              )
+            ],
+          ),
+        ),
       ),
     );
   }
